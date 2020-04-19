@@ -1,0 +1,67 @@
+#!/usr/bin/with-contenv bash
+
+STAGE="[OWNCLOUD]"
+WEBROOT="/var/www"
+
+echo "${STAGE} installing..."
+
+cd /tmp/ && { curl -O https://download.owncloud.org/community/owncloud-${OWNCLOUD_VERSION}.tar.bz2; cd -:; }
+##  https://download.owncloud.org/community/owncloud-${OWNCLOUD_VERSION}.tar.bz2.md5; cd -; }
+
+if [ -e /tmp/owncloud-${OWNCLOUD_VERSION}.tar.bz2 ]; then
+  echo "${STAGE} owncloud ${OWNCLOUD_VERSION} downloaded"
+else
+  echo "${STAGE} owncloud ${OWNCLOUD_VERSION} download failed...exiting"
+  exit 1;
+fi
+
+#if [ ! md5sum -status -c /tmp/owncloud-${OWNCLOUD_VERSION}.tar.bz2.md5 < /tmp/owncloud-${OWNCLOUD_VERSION}.tar.bz2 ]; then
+#  echo "${STAGE} md5sum fail...exiting"
+#  exit 1;
+#else
+#  echo "${STAGE} md5sum OK...extracting"
+#fi
+
+echo "${STAGE} extracting owncloud-${OWNCLOUD_VERSION}.tar.bz2"
+cd /tmp && tar -xjf owncloud-${OWNCLOUD_VERSION}.tar.bz2
+
+if [ -d /tmp/owncloud ]; then
+  echo "${STAGE} extracted"
+else
+  echo "${STAGE} extraction failed...exiting"
+  exit 1;
+fi
+
+echo "${STAGE} check for existing config.php..."
+if [ -e ${WEBROOT}/owncloud/config/config.php ]; then
+  echo "${STAGE} config.php found...removing default config.php"
+
+  rm /tmp/owncloud/config/config.php
+
+  if [ ! -e /tmp/owncloud/config/config.php ]; then
+    echo "${STAGE} default config.php removed"
+  else
+    echo "${STAGE} default config.php removal failed...exiting"
+    exit 1
+  fi
+else
+  echo "${STAGE} config.php not found...keeping default config.php"
+fi
+
+mv /tmp/owncloud ${WEBROOT}
+
+if [ -d ${WEBROOT}/owncloud ]; then
+  echo "${STAGE} moved to ${WEBROOT}"
+else
+  echo "${STAGE} move failed...exiting"
+  exit 1
+fi
+
+echo "${STAGE} clean up...remove owncloud source"
+rm /tmp/owncloud-${OWNCLOUD_VERSION}.tar.bz2
+if [ ! -e /tmp/owncloud-${OWNCLOUD_VERSION}.tar.bz2 ]; then
+  echo"${STAGE} owncloud source removed"
+else
+  echo"${STAGE} owncloud source removal failed"
+  exit 1;
+fi
