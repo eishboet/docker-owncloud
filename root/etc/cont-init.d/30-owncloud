@@ -5,7 +5,7 @@ WEBROOT="/var/www"
 
 echo "${STAGE} installing..."
 
-cd /tmp/ && { curl -O https://download.owncloud.org/community/owncloud-${OWNCLOUD_VERSION}.tar.bz2; cd -:; }
+cd /tmp/ && { curl -O https://download.owncloud.org/community/owncloud-${OWNCLOUD_VERSION}.tar.bz2; }
 ##  https://download.owncloud.org/community/owncloud-${OWNCLOUD_VERSION}.tar.bz2.md5; cd -; }
 
 if [ -e /tmp/owncloud-${OWNCLOUD_VERSION}.tar.bz2 ]; then
@@ -48,7 +48,7 @@ else
   echo "${STAGE} config.php not found...keeping default config.php"
 fi
 
-mv /tmp/owncloud ${WEBROOT}
+mv -f /tmp/owncloud ${WEBROOT}
 
 if [ -d ${WEBROOT}/owncloud ]; then
   echo "${STAGE} moved to ${WEBROOT}"
@@ -60,8 +60,8 @@ fi
 echo "${STAGE} clean up...remove owncloud source"
 rm /tmp/owncloud-${OWNCLOUD_VERSION}.tar.bz2
 if [ ! -e /tmp/owncloud-${OWNCLOUD_VERSION}.tar.bz2 ]; then
-  echo"${STAGE} owncloud source removed"
+  echo "${STAGE} owncloud source removed"
 else
-  echo"${STAGE} owncloud source removal failed"
+  echo "${STAGE} owncloud source removal failed"
   exit 1;
 fi
