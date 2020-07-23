@@ -4,8 +4,9 @@ ENV OWNCLOUD_VERSION="10.4.0"
 
 RUN apt-get install -y \
   php7.3 \
-  curl
+  curl \
+  && mkdir -p /apps /owncloud_config /updater
 
 COPY root/ /
 
-VOLUME /var/www/owncloud/config /data
+VOLUME /owncloud_config /data /apps /updater

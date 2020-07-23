@@ -1,67 +1,135 @@
 #!/usr/bin/with-contenv bash
 
-STAGE="[OWNCLOUD]"
+##
+# Script to install owncloud to the webroot
+##
+
+STAGE="[INIT-STAGE2][OWNCLOUD]"
 WEBROOT="/var/www"
+OCDIR="owncloud"
+OCPATH="${WEBROOT}/${OCDIR}"
+DATADIR="/data"
+CONFIGDIR="/owncloud_config"
+EXTAPPS="/apps"
+UPDATERDIR="/updater"
 
-echo "${STAGE} installing..."
+# owncloud flags
+# INSTALL (false) - flag to indicate whether owncloud has already been INSTALLED
+# VERSION - string to compare installed vs latest owncloud version
+# UPDATE (false)- flag to indicate that the owncloud installation should be upgraded
+# CONFIG (false)- flag to indicate that a pre-exisiting owncloud config.php file is available
+INSTALL=1
+VERSION=0
+UPDATE=1
+CONFIG=1
 
-cd /tmp/ && { curl -O https://download.owncloud.org/community/owncloud-${OWNCLOUD_VERSION}.tar.bz2; }
-##  https://download.owncloud.org/community/owncloud-${OWNCLOUD_VERSION}.tar.bz2.md5; cd -; }
+function download {
+  local downloaded=1
+  echo "${STAGE} downloading owncloud-${OWNCLOUD_VERSION}.tar.bz2..."
 
-if [ -e /tmp/owncloud-${OWNCLOUD_VERSION}.tar.bz2 ]; then
-  echo "${STAGE} owncloud ${OWNCLOUD_VERSION} downloaded"
-else
-  echo "${STAGE} owncloud ${OWNCLOUD_VERSION} download failed...exiting"
-  exit 1;
-fi
+  # cd to the /tmp directory and download the owncloud tar.bz2
+  cd /tmp/ && { curl -O https://download.owncloud.org/community/owncloud-${OWNCLOUD_VERSION}.tar.bz2; }
+  ##  https://download.owncloud.org/community/owncloud-${OWNCLOUD_VERSION}.tar.bz2.md5; cd -; }
 
-#if [ ! md5sum -status -c /tmp/owncloud-${OWNCLOUD_VERSION}.tar.bz2.md5 < /tmp/owncloud-${OWNCLOUD_VERSION}.tar.bz2 ]; then
-#  echo "${STAGE} md5sum fail...exiting"
-#  exit 1;
-#else
-#  echo "${STAGE} md5sum OK...extracting"
-#fi
-
-echo "${STAGE} extracting owncloud-${OWNCLOUD_VERSION}.tar.bz2"
-cd /tmp && tar -xjf owncloud-${OWNCLOUD_VERSION}.tar.bz2
-
-if [ -d /tmp/owncloud ]; then
-  echo "${STAGE} extracted"
-else
-  echo "${STAGE} extraction failed...exiting"
-  exit 1;
-fi
-
-echo "${STAGE} check for existing config.php..."
-if [ -e ${WEBROOT}/owncloud/config/config.php ]; then
-  echo "${STAGE} config.php found...removing default config.php"
-
-  rm /tmp/owncloud/config/config.php
-
-  if [ ! -e /tmp/owncloud/config/config.php ]; then
-    echo "${STAGE} default config.php removed"
+  # check whether the download succeeded
+  if [ -e /tmp/owncloud-${OWNCLOUD_VERSION}.tar.bz2 ]; then
+    echo "${STAGE} owncloud-${OWNCLOUD_VERSION}.tar.bz2 downloaded"
+    downloaded=0
   else
-    echo "${STAGE} default config.php removal failed...exiting"
-    exit 1
+    echo "${STAGE} owncloud-${OWNCLOUD_VERSION}.tar.bz2 download failed...exiting"
+  fi
+
+  return ${downloaded}
+}
+
+function extract {
+  # extract the owncloud tar.bz2 file
+  local extracted=1
+
+  echo "${STAGE} extracting owncloud-${OWNCLOUD_VERSION}.tar.bz2..."
+  cd /tmp && tar -xjf owncloud-${OWNCLOUD_VERSION}.tar.bz2
+
+  # confirm the owncloud-x-y-z.tar.bz2 has been extracted
+  if [ -d /tmp/owncloud ]; then
+    echo "${STAGE} owncloud-${OWNCLOUD_VERSION}.tar.bz2 extracted"
+    extracted=0
+  else
+    echo "${STAGE} owncloud-${OWNCLOUD_VERSION}.tar.bz2 extraction failed...exiting"
+  fi
+
+  return ${extracted}
+}
+
+function move_owncloud() {
+  mv /tmp/owncloud ${WEBROOT}
+}
+
+
+echo "${STAGE} checking for config.php..."
+
+if [ -e ${CONFIGDIR}/config.php ]; then
+  CONFIG=0
+  echo "${STAGE} config.php found...scanning"
+
+  VERSION=grep "'version'" ${CONFIGDIR}/config.php | cut -d"'" -f4
+
+  if [ grep "'installed' => true" ]; then
+    INSTALLED=0
+
+    if [ ${VERSION} == ${OWNCLOUD_VERSION} ]; then
+      echo "${STAGE} config.php indicates you are running the current version of owncloud!"
+    else
+      UPDATE=0
+    fi
+  fi
+fi
+
+if download ; then
+  if extract ; then
+    echo "${STAGE} installing owncloud-${OWNCLOUD_VERSION}..."
+
+    if [ ${INSTALL} == 0 ] && [ ${CONFIG} == 1 ]; then
+      mv /tmp/owncloud/config/* ${CONFIGDIR}/
+      rm -R /tmp/owncloud/config
+
+      mv /tmp/owncloud ${OCPATH}
+
+      ln -snf ${CONFIGDIR} ${OCPATH}/config
+      ln -snf ${EXTAPPS} ${OCPATH}/apps_external
+
+      chown -R www-data:www-data ${OCPATH}
+    elif [ ${INSTALL} == 1 ] && [ ${CONFIG} == 0 ]; then
+      rm -R /tmp/owncloud/config
+
+      mv /tmp/owncloud ${OCPATH}
+
+      ln -snf ${CONFIGDIR} ${OCPATH}/config
+      ln -snf ${EXTAPPS} ${OCPATH}/apps_external
+
+      chown -R www-data:www-data ${OCPATH}
+    elif [ ${UPDATE} == 0 ]; then
+      echo "${STAGE} Please ensure that your DATA and CONFIG directories and DATABASE have been backed up!"
+
+      maintenance_mode=grep "\'maintenance\'" ${CONFIGDIR}/config.php | cut -d"'" -f4
+      if [  maintenance_mode == false ]; then
+        echo "${STAGE} Please place your server into maintenance mode: -u www-data php ${OCPATH}/occ maintenance:mode --on"
+      else
+        rm -R /tmp/owncloud/config
+
+        mv ${OCPATH} ${WEBROOT}/owncloud_old
+        mv /tmp/owncloud ${OCPATH}
+
+        ln -snf ${CONFIGDIR} ${OCPATH}/config
+        ln -snf ${EXTAPPS} ${OCPATH}/apps_external
+
+        chown -R www-data:www-data ${OCPATH}
+
+        echo "${STAGE} Please run the following command from your docker interface: docker exec owncloud \/bin\/sh -c \"sudo -u www-data php ${OCPATH}\/occ upgrade"
+      fi
+    fi
+  else
+    exit 127
   fi
 else
-  echo "${STAGE} config.php not found...keeping default config.php"
-fi
-
-mv -f /tmp/owncloud ${WEBROOT}
-
-if [ -d ${WEBROOT}/owncloud ]; then
-  echo "${STAGE} moved to ${WEBROOT}"
-else
-  echo "${STAGE} move failed...exiting"
-  exit 1
-fi
-
-echo "${STAGE} clean up...remove owncloud source"
-rm /tmp/owncloud-${OWNCLOUD_VERSION}.tar.bz2
-if [ ! -e /tmp/owncloud-${OWNCLOUD_VERSION}.tar.bz2 ]; then
-  echo "${STAGE} owncloud source removed"
-else
-  echo "${STAGE} owncloud source removal failed"
-  exit 1;
+  exit 127
 fi
