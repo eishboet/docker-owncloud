@@ -100,6 +100,7 @@ if download ; then
 
       chown -R www-data:www-data ${OCPATH}
     elif [ ${INSTALL} == 0 ] && [ ${CONFIG} == 1 ]; then
+      echo "${STAGE} fresh install with existing config"
       mv /tmp/owncloud/config/* ${CONFIGDIR}/
       rm -R /tmp/owncloud/config
 
@@ -110,6 +111,7 @@ if download ; then
 
       chown -R www-data:www-data ${OCPATH}
     elif [ ${INSTALL} == 1 ] && [ ${CONFIG} == 0 ]; then
+      echo "${STAGE} 1"
       rm -R /tmp/owncloud/config
 
       mv /tmp/owncloud ${OCPATH}
