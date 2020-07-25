@@ -68,8 +68,8 @@ find -L ${ocapps_external}/ -type d -print0 | xargs -0 chmod 0750
 #chown
 printf "\nchown files and directories excluding data and apps-external directory \n"
 
-find  -L $ocpath  -path ${ocdata} -prune -o -path ${ocapps_external} -prune -o -type d -print0 | xargs -0 chown ${rootuser}:${htgroup}
-find  -L $ocpath  -path ${ocdata} -prune -o -path ${ocapps_external} -prune -o -type f -print0 | xargs -0 chown ${rootuser}:${htgroup}
+find -L $ocpath -path ${ocdata} -prune -o -path ${ocapps_external} -prune -o -type d -print0 | xargs -r -0 chown -R ${rootuser}:${htgroup}
+find -L $ocpath -path ${ocdata} -prune -o -path ${ocapps_external} -prune -o -type f -print0 | xargs -r -0 chown -R ${rootuser}:${htgroup}
 
 # do only if directories are present
 if [ -d ${ocpath}/apps/ ]; then
