@@ -74,7 +74,7 @@ if [ -e ${CONFIGDIR}/config.php ]; then
   VERSION=grep "'version'" ${CONFIGDIR}/config.php | cut -d"'" -f4
 
   if [ grep "'installed' => true" ]; then
-    INSTALLED=0
+    INSTALL=0
 
     if [ ${VERSION} == ${OWNCLOUD_VERSION} ]; then
       echo "${STAGE} config.php indicates you are running the current version of owncloud!"
@@ -88,7 +88,18 @@ if download ; then
   if extract ; then
     echo "${STAGE} installing owncloud-${OWNCLOUD_VERSION}..."
 
-    if [ ${INSTALL} == 0 ] && [ ${CONFIG} == 1 ]; then
+    if [ ${INSTALL} == 0 ] && [ ${CONFIG} == 0 ]; then
+      echo "${STAGE} fresh install"
+      mv /tmp/owncloud/config/* ${CONFIGDIR}/
+      rm -R /tmp/owncloud/config
+
+      mv /tmp/owncloud ${OCPATH}
+
+      ln -snf ${CONFIGDIR} ${OCPATH}/config
+      ln -snf ${EXTAPPS} ${OCPATH}/apps_external
+
+      chown -R www-data:www-data ${OCPATH}
+    elif [ ${INSTALL} == 0 ] && [ ${CONFIG} == 1 ]; then
       mv /tmp/owncloud/config/* ${CONFIGDIR}/
       rm -R /tmp/owncloud/config
 
