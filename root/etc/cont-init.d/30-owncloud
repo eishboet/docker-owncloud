@@ -4,7 +4,7 @@
 # Script to install owncloud to the webroot
 ##
 
-STAGE="[INIT-STAGE2][OWNCLOUD]"
+STAGE="[INIT-STAGE2][OWNCLOUD-INSTALL]"
 WEBROOT="/var/www"
 OCDIR="owncloud"
 OCPATH="${WEBROOT}/${OCDIR}"
@@ -22,9 +22,10 @@ INSTALL=1
 VERSION=0
 UPDATE=1
 CONFIG=1
+DOWNLOADED=1
+EXTRACTED=1
 
 function download {
-  local downloaded=1
   echo "${STAGE} downloading owncloud-${OWNCLOUD_VERSION}.tar.bz2..."
 
   # cd to the /tmp directory and download the owncloud tar.bz2
@@ -34,17 +35,16 @@ function download {
   # check whether the download succeeded
   if [ -e /tmp/owncloud-${OWNCLOUD_VERSION}.tar.bz2 ]; then
     echo "${STAGE} owncloud-${OWNCLOUD_VERSION}.tar.bz2 downloaded"
-    downloaded=0
+    DOWNLOADED=0
   else
     echo "${STAGE} owncloud-${OWNCLOUD_VERSION}.tar.bz2 download failed...exiting"
   fi
 
-  return ${downloaded}
+  return ${DOWNLOADED}
 }
 
 function extract {
   # extract the owncloud tar.bz2 file
-  local extracted=1
 
   echo "${STAGE} extracting owncloud-${OWNCLOUD_VERSION}.tar.bz2..."
   cd /tmp && tar -xjf owncloud-${OWNCLOUD_VERSION}.tar.bz2
@@ -52,12 +52,12 @@ function extract {
   # confirm the owncloud-x-y-z.tar.bz2 has been extracted
   if [ -d /tmp/owncloud ]; then
     echo "${STAGE} owncloud-${OWNCLOUD_VERSION}.tar.bz2 extracted"
-    extracted=0
+    EXTRACTED=0
   else
     echo "${STAGE} owncloud-${OWNCLOUD_VERSION}.tar.bz2 extraction failed...exiting"
   fi
 
-  return ${extracted}
+  return ${EXTRACTED}
 }
 
 function move_owncloud() {
