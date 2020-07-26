@@ -97,7 +97,7 @@ if download ; then
       s6-ln -snf ${CONFIGDIR} ${OCPATH}/config
       s6-ln -snf ${EXTAPPS} ${OCPATH}/apps_external
 
-      s6-chown -R www-data:www-data ${OCPATH}
+      chown -R www-data:www-data ${OCPATH}
     elif [ ${INSTALL} == 0 ] && [ ${CONFIG} == 1 ]; then
       s6-echo "${STAGE} fresh install with existing config"
       mv /tmp/owncloud/config/* ${CONFIGDIR}/
@@ -108,7 +108,7 @@ if download ; then
       s6-ln -snf ${CONFIGDIR} ${OCPATH}/config
       s6-ln -snf ${EXTAPPS} ${OCPATH}/apps_external
 
-      s6-chown -R www-data:www-data ${OCPATH}
+      chown -R www-data:www-data ${OCPATH}
     elif [ ${INSTALL} == 1 ] && [ ${CONFIG} == 0 ]; then
       s6-echo "${STAGE} 1"
       s6-rmrf -R /tmp/owncloud/config
@@ -118,7 +118,7 @@ if download ; then
       s6-ln -snf ${CONFIGDIR} ${OCPATH}/config
       s6-ln -snf ${EXTAPPS} ${OCPATH}/apps_external
 
-      s6-chown -R www-data:www-data ${OCPATH}
+      chown -R www-data:www-data ${OCPATH}
     elif [ ${UPDATE} == 0 ]; then
       s6-echo "${STAGE} Please ensure that your DATA and CONFIG directories and DATABASE have been backed up!"
 
@@ -134,7 +134,7 @@ if download ; then
         s6-ln -snf ${CONFIGDIR} ${OCPATH}/config
         s6-ln -snf ${EXTAPPS} ${OCPATH}/apps_external
 
-        s6-chown -R www-data:www-data ${OCPATH}
+        chown -R www-data:www-data ${OCPATH}
 
         s6-echo "${STAGE} Please run the following command from your docker interface: docker exec owncloud \/bin\/sh -c \"sudo -u www-data php ${OCPATH}\/occ upgrade"
       fi
