@@ -26,7 +26,7 @@ DOWNLOADED=1
 EXTRACTED=1
 
 function download {
-  echo "${STAGE} downloading owncloud-${OWNCLOUD_VERSION}.tar.bz2..."
+  s6-echo "${STAGE} downloading owncloud-${OWNCLOUD_VERSION}.tar.bz2..."
 
   # cd to the /tmp directory and download the owncloud tar.bz2
   cd /tmp/ && { curl -O https://download.owncloud.org/community/owncloud-${OWNCLOUD_VERSION}.tar.bz2; }
@@ -34,10 +34,10 @@ function download {
 
   # check whether the download succeeded
   if [ -e /tmp/owncloud-${OWNCLOUD_VERSION}.tar.bz2 ]; then
-    echo "${STAGE} owncloud-${OWNCLOUD_VERSION}.tar.bz2 downloaded"
+    s6-echo "${STAGE} owncloud-${OWNCLOUD_VERSION}.tar.bz2 downloaded"
     DOWNLOADED=0
   else
-    echo "${STAGE} owncloud-${OWNCLOUD_VERSION}.tar.bz2 download failed...exiting"
+    s6-echo "${STAGE} owncloud-${OWNCLOUD_VERSION}.tar.bz2 download failed...exiting"
   fi
 
   return ${DOWNLOADED}
@@ -46,15 +46,15 @@ function download {
 function extract {
   # extract the owncloud tar.bz2 file
 
-  echo "${STAGE} extracting owncloud-${OWNCLOUD_VERSION}.tar.bz2..."
+  s6-echo "${STAGE} extracting owncloud-${OWNCLOUD_VERSION}.tar.bz2..."
   cd /tmp && tar -xjf owncloud-${OWNCLOUD_VERSION}.tar.bz2
 
   # confirm the owncloud-x-y-z.tar.bz2 has been extracted
   if [ -d /tmp/owncloud ]; then
-    echo "${STAGE} owncloud-${OWNCLOUD_VERSION}.tar.bz2 extracted"
+    s6-echo "${STAGE} owncloud-${OWNCLOUD_VERSION}.tar.bz2 extracted"
     EXTRACTED=0
   else
-    echo "${STAGE} owncloud-${OWNCLOUD_VERSION}.tar.bz2 extraction failed...exiting"
+    s6-echo "${STAGE} owncloud-${OWNCLOUD_VERSION}.tar.bz2 extraction failed...exiting"
   fi
 
   return ${EXTRACTED}
@@ -64,20 +64,19 @@ function move_owncloud() {
   mv /tmp/owncloud ${WEBROOT}
 }
 
-
-echo "${STAGE} checking for config.php..."
+s6-echo "${STAGE} checking for config.php..."
 
 if [ -e ${CONFIGDIR}/config.php ]; then
   CONFIG=0
-  echo "${STAGE} config.php found...scanning"
+  s6-echo "${STAGE} config.php found...scanning"
 
   VERSION=grep "'version'" ${CONFIGDIR}/config.php | cut -d"'" -f4
 
-  if [ grep "'installed' => true" ]; then
+  if [ s6-grep "'installed' => true" ]; then
     INSTALL=0
 
     if [ ${VERSION} == ${OWNCLOUD_VERSION} ]; then
-      echo "${STAGE} config.php indicates you are running the current version of owncloud!"
+      s6-echo "${STAGE} config.php indicates you are running the current version of owncloud!"
     else
       UPDATE=0
     fi
@@ -86,58 +85,58 @@ fi
 
 if download ; then
   if extract ; then
-    echo "${STAGE} installing owncloud-${OWNCLOUD_VERSION}..."
+    s6-echo "${STAGE} installing owncloud-${OWNCLOUD_VERSION}..."
 
-    if [ ${INSTALL} == 0 ] && [ ${CONFIG} == 0 ]; then
-      echo "${STAGE} fresh install"
+    if [ ${INSTALL} == 1 ] && [ ${CONFIG} == 1 ]; then
+      s6-echo "${STAGE} fresh install"
       mv /tmp/owncloud/config/* ${CONFIGDIR}/
-      rm -R /tmp/owncloud/config
+      s6-rmrf -R /tmp/owncloud/config
 
       mv /tmp/owncloud ${OCPATH}
 
-      ln -snf ${CONFIGDIR} ${OCPATH}/config
-      ln -snf ${EXTAPPS} ${OCPATH}/apps_external
+      s6-ln -snf ${CONFIGDIR} ${OCPATH}/config
+      s6-ln -snf ${EXTAPPS} ${OCPATH}/apps_external
 
-      chown -R www-data:www-data ${OCPATH}
+      s6-chown -R www-data:www-data ${OCPATH}
     elif [ ${INSTALL} == 0 ] && [ ${CONFIG} == 1 ]; then
-      echo "${STAGE} fresh install with existing config"
+      s6-echo "${STAGE} fresh install with existing config"
       mv /tmp/owncloud/config/* ${CONFIGDIR}/
-      rm -R /tmp/owncloud/config
+      s6-rmrf -R /tmp/owncloud/config
 
       mv /tmp/owncloud ${OCPATH}
 
-      ln -snf ${CONFIGDIR} ${OCPATH}/config
-      ln -snf ${EXTAPPS} ${OCPATH}/apps_external
+      s6-ln -snf ${CONFIGDIR} ${OCPATH}/config
+      s6-ln -snf ${EXTAPPS} ${OCPATH}/apps_external
 
-      chown -R www-data:www-data ${OCPATH}
+      s6-chown -R www-data:www-data ${OCPATH}
     elif [ ${INSTALL} == 1 ] && [ ${CONFIG} == 0 ]; then
-      echo "${STAGE} 1"
-      rm -R /tmp/owncloud/config
+      s6-echo "${STAGE} 1"
+      s6-rmrf -R /tmp/owncloud/config
 
       mv /tmp/owncloud ${OCPATH}
 
-      ln -snf ${CONFIGDIR} ${OCPATH}/config
-      ln -snf ${EXTAPPS} ${OCPATH}/apps_external
+      s6-ln -snf ${CONFIGDIR} ${OCPATH}/config
+      s6-ln -snf ${EXTAPPS} ${OCPATH}/apps_external
 
-      chown -R www-data:www-data ${OCPATH}
+      s6-chown -R www-data:www-data ${OCPATH}
     elif [ ${UPDATE} == 0 ]; then
-      echo "${STAGE} Please ensure that your DATA and CONFIG directories and DATABASE have been backed up!"
+      s6-echo "${STAGE} Please ensure that your DATA and CONFIG directories and DATABASE have been backed up!"
 
       maintenance_mode=grep "\'maintenance\'" ${CONFIGDIR}/config.php | cut -d"'" -f4
       if [  maintenance_mode == false ]; then
-        echo "${STAGE} Please place your server into maintenance mode: -u www-data php ${OCPATH}/occ maintenance:mode --on"
+        s6-echo "${STAGE} Please place your server into maintenance mode: -u www-data php ${OCPATH}/occ maintenance:mode --on"
       else
-        rm -R /tmp/owncloud/config
+        s6-rmrf -R /tmp/owncloud/config
 
         mv ${OCPATH} ${WEBROOT}/owncloud_old
         mv /tmp/owncloud ${OCPATH}
 
-        ln -snf ${CONFIGDIR} ${OCPATH}/config
-        ln -snf ${EXTAPPS} ${OCPATH}/apps_external
+        s6-ln -snf ${CONFIGDIR} ${OCPATH}/config
+        s6-ln -snf ${EXTAPPS} ${OCPATH}/apps_external
 
-        chown -R www-data:www-data ${OCPATH}
+        s6-chown -R www-data:www-data ${OCPATH}
 
-        echo "${STAGE} Please run the following command from your docker interface: docker exec owncloud \/bin\/sh -c \"sudo -u www-data php ${OCPATH}\/occ upgrade"
+        s6-echo "${STAGE} Please run the following command from your docker interface: docker exec owncloud \/bin\/sh -c \"sudo -u www-data php ${OCPATH}\/occ upgrade"
       fi
     fi
   else
