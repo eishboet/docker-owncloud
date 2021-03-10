@@ -13,4 +13,4 @@ RUN chmod 0600 /etc/cron.d/owncloud-cron
 
 COPY root/ /
 
-VOLUME /owncloud_config /data /apps /updater
+VOLUME /data /apps /updater

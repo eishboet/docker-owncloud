@@ -5,11 +5,11 @@
 ##
 
 STAGE="[INIT-STAGE2][OWNCLOUD-INSTALL]"
-WEBROOT="/var/www"
+WEBROOT="/var/www/html"
 OCDIR="owncloud"
 OCPATH="${WEBROOT}/${OCDIR}"
 DATADIR="/data"
-CONFIGDIR="/owncloud_config"
+CONFIGDIR="/config/owncloud/config"
 EXTAPPS="/apps"
 UPDATERDIR="/updater"
 
@@ -64,13 +64,72 @@ function move_owncloud() {
   mv /tmp/owncloud ${WEBROOT}
 }
 
+function check_owncloud_install() {
+  s6-echo "${STAGE} checking for config.php..."
+
+  if [ -e ${CONFIGDIR}/config.php ]; then
+    CONFIG=0
+    s6-echo "${STAGE} config.php FOUND"
+  else
+    s6-echo "${STAGE} config.php NOT FOUND"
+    CONFIG=1
+  fi
+
+  return ${CONFIG}
+}
+
+function check_owncloud_version() {
+  s6-echo "${STAGE} checking for owncloud installation..."
+
+  if check_owncloud_install ; then
+    if [ s6-grep "'installed' => true" ]; then
+      s6-echo "${STAGE} previous installation of owncloud FOUND"
+      INSTALL=0
+    else
+      s6-echo "${STAGE} previous installation of owncloud NOT FOUND"
+      INSTALL=1
+  fi
+
+  return ${INSTALL}
+}
+
+fuction check_update_required() {
+  s6-echo "checking installed version..."
+
+  VERSION=s6-grep "'version'" ${CONFIGDIR}/config.php | s6-cut -d"'" -f4
+
+  s6-echo "installed version: ${VERSION}"
+
+  if [ ${VERSION} == ${OWNCLOUD_VERSION} ]; then
+    s6-echo "${STAGE} config.php indicates you are running the current version of owncloud!"
+    UPDATE=1
+  else
+    UPDATE=0
+  fi
+
+  return ${UPDATE}
+}
+
+function install() {
+  s6-echo "${STAGE} fresh install"
+  mv /tmp/owncloud/config/* ${CONFIGDIR}/
+  s6-rmrf -R /tmp/owncloud/config
+
+  mv * /tmp/owncloud/ ${OCPATH}
+
+  s6-ln -snf ${CONFIGDIR} ${OCPATH}/config
+  s6-ln -snf ${EXTAPPS} ${OCPATH}/apps_external
+
+  chown -R www-data:www-data ${OCPATH}
+}
+
 s6-echo "${STAGE} checking for config.php..."
 
 if [ -e ${CONFIGDIR}/config.php ]; then
   CONFIG=0
   s6-echo "${STAGE} config.php found...scanning"
 
-  VERSION=grep "'version'" ${CONFIGDIR}/config.php | cut -d"'" -f4
+  VERSION=s6-grep "'version'" ${CONFIGDIR}/config.php | s6-cut -d"'" -f4
 
   if [ s6-grep "'installed' => true" ]; then
     INSTALL=0
@@ -83,6 +142,22 @@ if [ -e ${CONFIGDIR}/config.php ]; then
   fi
 fi
 
+if
+
+if check_owncloud_install == 1 ; then # check_owncloud_install returns false - no previous installation of owncloud
+  if download == 1 ; then
+    s6-echo "${STAGE} install failed...exiting"
+    exit 127
+  else
+    if extracted == 1 ; then
+      s6-echo "${STAGE} install failed...exiting"
+      exit 127
+    else
+      
+
+
+
+
 if download ; then
   if extract ; then
     s6-echo "${STAGE} installing owncloud-${OWNCLOUD_VERSION}..."
@@ -92,7 +167,7 @@ if download ; then
       mv /tmp/owncloud/config/* ${CONFIGDIR}/
       s6-rmrf -R /tmp/owncloud/config
 
-      mv /tmp/owncloud ${OCPATH}
+      mv * /tmp/owncloud/ ${OCPATH}
 
       s6-ln -snf ${CONFIGDIR} ${OCPATH}/config
       s6-ln -snf ${EXTAPPS} ${OCPATH}/apps_external
@@ -101,9 +176,9 @@ if download ; then
     elif [ ${INSTALL} == 0 ] && [ ${CONFIG} == 1 ]; then
       s6-echo "${STAGE} fresh install with existing config"
       mv /tmp/owncloud/config/* ${CONFIGDIR}/
-      s6-rmrf -R /tmp/owncloud/config
+      s6-rmrf -R /tmp/.owncloud/config
 
-      mv /tmp/owncloud ${OCPATH}
+      mv * /tmp/owncloud/ ${OCPATH}
 
       s6-ln -snf ${CONFIGDIR} ${OCPATH}/config
       s6-ln -snf ${EXTAPPS} ${OCPATH}/apps_external
@@ -113,7 +188,7 @@ if download ; then
       s6-echo "${STAGE} 1"
       s6-rmrf -R /tmp/owncloud/config
 
-      mv /tmp/owncloud ${OCPATH}
+      mv * /tmp/owncloud/ ${OCPATH}
 
       s6-ln -snf ${CONFIGDIR} ${OCPATH}/config
       s6-ln -snf ${EXTAPPS} ${OCPATH}/apps_external
@@ -129,7 +204,7 @@ if download ; then
         s6-rmrf -R /tmp/owncloud/config
 
         mv ${OCPATH} ${WEBROOT}/owncloud_old
-        mv /tmp/owncloud ${OCPATH}
+        mv * /tmp/owncloud/ ${OCPATH}
 
         s6-ln -snf ${CONFIGDIR} ${OCPATH}/config
         s6-ln -snf ${EXTAPPS} ${OCPATH}/apps_external
